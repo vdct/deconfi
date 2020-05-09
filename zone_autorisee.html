@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>Déconfinement : jusqu'où aller ?</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+    <script src="js/jquery-3.4.1.min.js"></script>
+
+
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+		}
+		#bandeau {
+			position: relative;
+			top: 0px;
+			left: 0px;
+			width:100%;
+			/*height: 20px;*/
+			z-index: 2;
+			text-align: center;
+		}
+		#map {
+			width: 100%;
+			height: 100%;
+		}
+		#accueil{
+			position: relative;
+			top: 0px;
+			left: 0px;
+			width:100%;
+			/*height: 20px;*/
+			z-index: 3;
+			background-color: wheat;
+			font-weight: bold;
+			text-align: center;			
+		}
+	</style>
+
+	
+</head>
+<body onload="start()">
+<div id='accueil'>Visualisez la zone de déplacement autorisée sans attestation à partir du 11 mai.</br>
+Sur la carte, un clic n'importe où en France permet de tracer la limite de circulation depuis ce point, en respectant le rayon de 100 km et l'accès à tout le département</br>
+Plus d'informations sur le <a href="https://www.gouvernement.fr/info-coronavirus/strategie-de-deconfinement" target="blank">site du gouvernement</a></div>
+<div id='bandeau'></div>
+
+<div id='map'></div>
+
+<script>
+	var map = L.map('map').setView([46, 2], 6);
+
+	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+			'<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+		id: 'mapbox/light-v9',
+		tileSize: 512,
+		zoomOffset: -1
+	}).addTo(map);
+
+	var zone_layer = false
+	var click_marker = false
+	var end_marker = false
+	var longest_line = false
+
+	function onMapClick(e) {
+		$('#accueil').hide()
+	    get_poly(e.latlng)
+	}
+	map.on('click', onMapClick);
+
+    function start(){
+    	if (window.location.hash){
+			if (window.location.hash.split('x=')[1]){
+				if ((window.location.hash.split('x=')[1]).split('&y=')[1]){
+  				    lon = (window.location.hash.split('x=')[1]).split('&y=')[0]
+  				    lat = (window.location.hash.split('x=')[1]).split('&y=')[1]
+  				    get_poly({'lat':lat,'lng':lon})
+				}
+			}
+    	}
+    }
+
+    function get_poly(latlng){
+		$.ajax({
+		    url: "zone_autorisee.py?lat="+latlng.lat+"&lon="+latlng.lng
+		})
+		.done(function( data ) {
+			poly = data[0]
+			infos = data[1]
+			ll = data[2]
+			distance_max = data[3]
+			distance_max_km = (distance_max/1000).toFixed(0)
+			lon_dest = data[4]
+			lat_dest = data[5]
+			infos_dest = data[6]
+			if (zone_layer){
+				map.removeLayer(zone_layer)
+			}
+			if (click_marker){
+				map.removeLayer(click_marker)
+			}
+			if (end_marker){
+				map.removeLayer(end_marker)
+			}
+			if (longest_line){
+				map.removeLayer(longest_line)	
+			}
+			if (infos == null){
+          	    $('#bandeau').empty().append("Pas d'informations hors France")				
+			} else {
+	        	zone_layer = L.geoJSON(poly)
+	        	zone_layer.addTo(map);
+	        	longest_line = L.geoJSON(ll,{color:'green'})
+	        	longest_line.addTo(map);
+	        	click_marker = L.marker(latlng)
+	        	click_marker.addTo(map);
+	        	click_marker.bindPopup("<b>"+infos[0]+' ('+infos[1]+")</b>").openPopup();
+	        	end_marker = L.marker([lat_dest,lon_dest],{color:'red'})
+	        	end_marker.addTo(map);
+	        	end_marker.bindPopup("<b>"+infos_dest[0]+' ('+infos_dest[1]+")</b></br>"+distance_max_km+" km de "+infos[0]+" à vol d'oiseau").openPopup();
+	        	$('#bandeau').empty().append($('<h4>').append("Jusqu'où aller depuis "+infos[0]+' ('+infos[1]+') ?'))
+	        	// $('#bandeau').empty().append(infos[0]+' ('+infos[1]+')')
+	        	// $('#bandeau').append($('<span>').append(distance_max_km+' km au mieux à vol d\'oiseau'))
+	        }
+		})
+		window.location.hash="#x="+(Number(latlng.lng).toFixed(5))+"&y="+(Number(latlng.lat).toFixed(5))
+	}
+
+</script>
+
+</body>
+</html>
+
