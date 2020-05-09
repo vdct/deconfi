@@ -7,8 +7,6 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	
-	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
     <script src="js/jquery-3.4.1.min.js"></script>
@@ -30,7 +28,7 @@
 		}
 		#map {
 			width: 100%;
-			height: 100%;
+			height: 90%;
 		}
 		#accueil{
 			position: relative;
@@ -48,23 +46,24 @@
 	
 </head>
 <body onload="start()">
-<div id='accueil'>Visualisez la zone de déplacement autorisée sans attestation à partir du 11 mai.</br>
-Sur la carte, un clic n'importe où en France permet de tracer la limite de circulation depuis ce point, en respectant le rayon de 100 km et l'accès à tout le département</br>
-Plus d'informations sur le <a href="https://www.gouvernement.fr/info-coronavirus/strategie-de-deconfinement" target="blank">site du gouvernement</a></div>
+<div id='accueil'>Visualisez la zone de déplacement autorisée sans attestation à partir du 11 mai*.</br>
+Sur la carte, un clic n'importe où en France permet de tracer la limite de circulation depuis ce point, en respectant le rayon de 100 km et l'accès à tout le département. Une ligne verte montre le plus long vol d'oiseau possible et la commune atteinte</br>
+
+* Plus d'informations sur le <a href="https://www.gouvernement.fr/info-coronavirus/strategie-de-deconfinement" target="blank">site du gouvernement</a></div>
 <div id='bandeau'></div>
 
 <div id='map'></div>
 
+
 <script>
 	var map = L.map('map').setView([46, 2], 6);
 
-	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+	L.tileLayer('https://b.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
 		maxZoom: 18,
-		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+		attribution: 'Par <a href="https://twitter.com/_vdct">vdct</a> Hébergement <a href="https://twitter.com/OSM_FR">OSM France</a> Données &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
 			'<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
-		id: 'mapbox/light-v9',
-		tileSize: 512,
-		zoomOffset: -1
+		tileSize: 256,
+		zoomOffset: 0
 	}).addTo(map);
 
 	var zone_layer = false
