@@ -66,13 +66,25 @@ cgitb.enable()
 params = cgi.FieldStorage()
 lat = params['lat'].value
 lon = params['lon'].value
-# lat = 48
-# lon = 2
+# lat = -52.29492 
+# lon = 4.37893
 
 epsg = 2154
-commune, dept = get_commune(lat,lon)
-if len(dept) !=2:
-    epsg = 3857
+commune_dept = get_commune(lat,lon)
+if commune_dept:
+    dept = commune_dept[1]
+    if len(dept) !=2:
+        epsg = 3857
+    if dept == '971':
+        epsg = 4559
+    if dept == '972':
+        epsg = 4559
+    if dept == '973':
+        epsg = 2972
+    if dept == '974':
+        epsg = 2975
+    if dept == '976':
+        epsg = 4471
 
 geom_ll,longueur,lon_dest,lat_dest = get_longest_line(lat,lon,epsg)
 

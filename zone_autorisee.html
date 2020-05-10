@@ -117,6 +117,7 @@ Sur la carte, un clic n'importe où en France permet de tracer la limite de circ
 			if (infos == null){
           	    $('#bandeau').empty().append("Pas d'informations hors France")				
 			} else {
+	        	$('#bandeau').empty().append($('<h4>').append("Jusqu'où aller depuis "+infos[0]+' ('+infos[1]+') ?'))
 	        	zone_layer = L.geoJSON(poly)
 	        	zone_layer.addTo(map);
 	        	longest_line = L.geoJSON(ll,{color:'green'})
@@ -126,8 +127,9 @@ Sur la carte, un clic n'importe où en France permet de tracer la limite de circ
 	        	click_marker.bindPopup("<b>"+infos[0]+' ('+infos[1]+")</b>").openPopup();
 	        	end_marker = L.marker([lat_dest,lon_dest],{color:'red'})
 	        	end_marker.addTo(map);
-	        	end_marker.bindPopup("<b>"+infos_dest[0]+' ('+infos_dest[1]+")</b></br>"+distance_max_km+" km de "+infos[0]+" à vol d'oiseau").openPopup();
-	        	$('#bandeau').empty().append($('<h4>').append("Jusqu'où aller depuis "+infos[0]+' ('+infos[1]+') ?'))
+	        	if (infos_dest != null){
+	        		end_marker.bindPopup("<b>"+infos_dest[0]+' ('+infos_dest[1]+")</b></br>"+distance_max_km+" km de "+infos[0]+" à vol d'oiseau").openPopup();
+	        	}
 	        	// $('#bandeau').empty().append(infos[0]+' ('+infos[1]+')')
 	        	// $('#bandeau').append($('<span>').append(distance_max_km+' km au mieux à vol d\'oiseau'))
 	        }
