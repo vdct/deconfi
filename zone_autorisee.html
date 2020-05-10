@@ -90,6 +90,7 @@ Sur la carte, un clic n'importe où en France permet de tracer la limite de circ
     }
 
     function get_poly(latlng){
+	    $('#map').css('cursor','progress');
 		$.ajax({
 		    url: "zone_autorisee.py?lat="+latlng.lat+"&lon="+latlng.lng
 		})
@@ -130,11 +131,10 @@ Sur la carte, un clic n'importe où en France permet de tracer la limite de circ
 	        	if (infos_dest != null){
 	        		end_marker.bindPopup("<b>"+infos_dest[0]+' ('+infos_dest[1]+")</b></br>"+distance_max_km+" km de "+infos[0]+" à vol d'oiseau").openPopup();
 	        	}
-	        	// $('#bandeau').empty().append(infos[0]+' ('+infos[1]+')')
-	        	// $('#bandeau').append($('<span>').append(distance_max_km+' km au mieux à vol d\'oiseau'))
 	        }
 		})
 		window.location.hash="#x="+(Number(latlng.lng).toFixed(5))+"&y="+(Number(latlng.lat).toFixed(5))
+        $('#map').css('cursor','default');
 	}
 
 </script>

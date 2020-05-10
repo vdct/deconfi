@@ -10,12 +10,24 @@ import db
 def get_zone(lat,lon,epsg):
     with db.bano_cache.cursor() as cur:
         cur.execute(f"""
-                        SELECT ST_AsGeoJSON(ST_Union(geometrie))
+                        WITH
+                        zone_full
+                        AS
+                        (SELECT (ST_Union(geometrie)) geometrie
                         FROM
                         (SELECT geometrie FROM depts_geo WHERE ST_Contains(geometrie,ST_SetSRID(ST_MakePoint({lon},{lat}),4326))
                         UNION ALL
-                        SELECT ST_Transform(ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}),100000),4326)) a
+                        SELECT ST_Transform(ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}),100000),4326))a),
+                        zone_stricte
+                        AS
+                        (SELECT ST_Intersection(zf.geometrie,fr.geometrie) geometrie
+                        FROM zone_full AS zf
+                        JOIN contours_france_geo AS fr
+                        ON zf.geometrie && fr.geometrie)
+                        SELECT ST_AsGeoJSON(ST_Union(geometrie),5)
+                        FROM zone_stricte
                      """)
+
         return((cur.fetchone()[0]))
 
 def get_commune(lat,lon):
@@ -30,15 +42,13 @@ def get_commune(lat,lon):
                      """)
         return((cur.fetchone()))
 
-def get_longest_line(lat,lon,epsg):
+def get_longest_line(lat,lon,epsg,geojson):
     with db.bano_cache.cursor() as cur:
         cur.execute(f"""
                         WITH
                         zone
                         AS
-                        (SELECT ST_Transform(geometrie,{epsg}) as geom_zone FROM depts_geo WHERE ST_Contains(geometrie,ST_SetSRID(ST_MakePoint({lon},{lat}),4326))
-                        UNION ALL
-                        SELECT ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}),100000)),
+                        (SELECT ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON('{geojson}'),4326),{epsg}) AS geom_zone),
                         centre
                         AS
                         (SELECT ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}) as geom_centre),
@@ -55,8 +65,8 @@ def get_longest_line(lat,lon,epsg):
                         LIMIT 1)
                         SELECT ST_AsGeoJSON(geometrie),
                         longueur,
-                        ST_X(ST_EndPoint(geometrie)),
-                        ST_Y(ST_EndPoint(geometrie))
+                        ST_X(ST_LineInterpolatePoint(geometrie,0.999)),
+                        ST_Y(ST_LineInterpolatePoint(geometrie,0.999))
                         FROM ll
                      """)
         return((cur.fetchone()))
@@ -66,8 +76,8 @@ cgitb.enable()
 params = cgi.FieldStorage()
 lat = params['lat'].value
 lon = params['lon'].value
-# lat = -52.29492 
-# lon = 4.37893
+# lat = 47.85919
+# lon = -3.52112
 
 epsg = 2154
 commune_dept = get_commune(lat,lon)
@@ -86,10 +96,10 @@ if commune_dept:
     if dept == '976':
         epsg = 4471
 
-geom_ll,longueur,lon_dest,lat_dest = get_longest_line(lat,lon,epsg)
+geojson = get_zone(lat,lon,epsg)
+geom_ll,longueur,lon_dest,lat_dest = get_longest_line(lat,lon,epsg,geojson)
 
 print ("Content-Type: application/json")
 print ("")
 
-print(f"[{get_zone(lat,lon,epsg)},{json.JSONEncoder().encode(get_commune(lat,lon))},{geom_ll},{longueur},{lon_dest},{lat_dest},{json.JSONEncoder().encode(get_commune(lat_dest,lon_dest))}]")
-# print(f"{get_zone(lat,lon)}")
+print(f"[{geojson},{json.JSONEncoder().encode(get_commune(lat,lon))},{geom_ll},{longueur},{lon_dest},{lat_dest},{json.JSONEncoder().encode(get_commune(lat_dest,lon_dest))}]")
