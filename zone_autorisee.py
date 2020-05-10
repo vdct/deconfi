@@ -7,14 +7,14 @@ import json
 
 import db
 
-def get_zone(lat,lon):
+def get_zone(lat,lon,epsg):
     with db.bano_cache.cursor() as cur:
         cur.execute(f"""
                         SELECT ST_AsGeoJSON(ST_Union(geometrie))
                         FROM
                         (SELECT geometrie FROM depts_geo WHERE ST_Contains(geometrie,ST_SetSRID(ST_MakePoint({lon},{lat}),4326))
                         UNION ALL
-                        SELECT ST_Transform(ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),3857),100000),4326)) a
+                        SELECT ST_Transform(ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}),100000),4326)) a
                      """)
         return((cur.fetchone()[0]))
 
@@ -30,18 +30,18 @@ def get_commune(lat,lon):
                      """)
         return((cur.fetchone()))
 
-def get_longest_line(lat,lon):
+def get_longest_line(lat,lon,epsg):
     with db.bano_cache.cursor() as cur:
         cur.execute(f"""
                         WITH
                         zone
                         AS
-                        (SELECT ST_Transform(geometrie,3857) as geom_zone FROM depts_geo WHERE ST_Contains(geometrie,ST_SetSRID(ST_MakePoint({lon},{lat}),4326))
+                        (SELECT ST_Transform(geometrie,{epsg}) as geom_zone FROM depts_geo WHERE ST_Contains(geometrie,ST_SetSRID(ST_MakePoint({lon},{lat}),4326))
                         UNION ALL
-                        SELECT ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),3857),100000)),
+                        SELECT ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}),100000)),
                         centre
                         AS
-                        (SELECT ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),3857) as geom_centre),
+                        (SELECT ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}) as geom_centre),
                         ll_all
                         AS
                         (SELECT ST_LongestLine(geom_centre,geom_zone) geom_ll
@@ -69,10 +69,15 @@ lon = params['lon'].value
 # lat = 48
 # lon = 2
 
-geom_ll,longueur,lon_dest,lat_dest = get_longest_line(lat,lon)
+epsg = 2154
+commune, dept = get_commune(lat,lon)
+if len(dept) !=2:
+    epsg = 3857
+
+geom_ll,longueur,lon_dest,lat_dest = get_longest_line(lat,lon,epsg)
 
 print ("Content-Type: application/json")
 print ("")
 
-print(f"[{get_zone(lat,lon)},{json.JSONEncoder().encode(get_commune(lat,lon))},{geom_ll},{longueur},{lon_dest},{lat_dest},{json.JSONEncoder().encode(get_commune(lat_dest,lon_dest))}]")
+print(f"[{get_zone(lat,lon,epsg)},{json.JSONEncoder().encode(get_commune(lat,lon))},{geom_ll},{longueur},{lon_dest},{lat_dest},{json.JSONEncoder().encode(get_commune(lat_dest,lon_dest))}]")
 # print(f"{get_zone(lat,lon)}")
