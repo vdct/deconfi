@@ -54,13 +54,12 @@ Sur la carte, un clic n'importe où en France permet de tracer la limite de circ
 
 <div id='map'></div>
 
-
 <script>
 	var map = L.map('map').setView([46, 2], 6);
 
 	L.tileLayer('https://b.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
 		maxZoom: 18,
-		attribution: 'Par <a href="https://twitter.com/_vdct">vdct</a> Hébergement <a href="https://twitter.com/OSM_FR">OSM France</a> Données &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+		attribution: 'Par <a href="https://twitter.com/_vdct">vdct</a> <a href="https://github.com/vdct/deconfi">Code source</a> Hébergement <a href="https://twitter.com/OSM_FR">OSM France</a> Données &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
 			'<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
 		tileSize: 256,
 		zoomOffset: 0
