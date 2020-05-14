@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <title>Déconfinement : où se retrouver ?</title>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/svg-icon.js"></script>
+
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: Sans Serif
+        }
+        #bandeau {
+            position: relative;
+            top: 0px;
+            left: 0px;
+            width:100%;
+            /*height: 20px;*/
+            z-index: 2;
+            text-align: center;
+        }
+        #map {
+            width: 100%;
+            height: 90%;
+        }
+        #infos{
+            width: 100%;
+            height: 10%;
+            bottom: 0px;
+            background-color: white;
+        }
+        #firstCommune{
+            right: 50%;
+            background-color: green;
+        }
+        #lastCommune{
+            left: 50%;
+            background-color: blue;
+        }
+        .infosCommunes{
+            position: absolute;
+            padding-top: 10px;
+            padding-left: 10px;
+            padding-right: 20px;
+            text-align: center;
+            height: 10%;
+            color: white;
+            font-weight: bold;
+        }
+        #accueil{
+            position: relative;
+            top: 0px;
+            left: 0px;
+            width:100%;
+            /*height: 20px;*/
+            z-index: 3;
+            background-color: wheat;
+            font-weight: bold;
+            text-align: center;         
+        }
+        .styleZone{
+            visibility: hidden;
+        }
+        .firstZone,
+        .firstMarker{
+            color:green;
+            fill:false;
+        }
+        .lastZone,
+        .lastMarker{
+            color:rgb(0,0,255);
+            /*fill:false;*/
+        }
+        .interZone{
+            color:red;
+        }
+        .fermer{
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            color: white;
+            /*border: 1px black solid;*/
+            width: 20px;
+            text-align: center;
+            /*background: white;*/
+            font-weight: normal;
+            font-size: 12px;
+        }
+
+    </style>
+
+    
+</head>
+<body onload="start()">
+<div id='accueil'>Trouvez où vous rencontrer sans attestation* depuis le 11 mai.</br>
+Choisissez 2 points de départ en cliquant sur la carte, et visualisez leur espace commun (<span class="interZone">en rouge</span>) en respectant le rayon de 100 km et l'accès à tout le département de chaque départ.</br>
+
+* Plus d'informations sur le <a href="https://www.gouvernement.fr/info-coronavirus/strategie-de-deconfinement" target="blank">site du gouvernement</a></div>
+<div id='bandeau'></div>
+
+<div id='map'></div>
+<div id='infos'>
+    <div id='firstCommune' prefixe='first' class="infosCommunes"><span></span><div class="fermer">X</div></div>
+    <div id='lastCommune' prefixe='last' class="infosCommunes"><span></span><div class="fermer">X</div></div>
+</div>
+
+
+<script>
+    var map = L.map('map').setView([46, 2], 6);
+
+    L.tileLayer('https://b.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: 'Par <a href="https://twitter.com/_vdct">vdct</a> <a href="https://github.com/vdct/deconfi">Code source</a> Hébergement <a href="https://twitter.com/OSM_FR">OSM France</a> Données &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+            '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+        tileSize: 256,
+        zoomOffset: 0
+    }).addTo(map);
+
+    // var zone_layer = false
+    // var click_marker = false
+    // var end_marker = false
+    // var longest_line = false
+
+    $('.infosCommunes > .fermer').click(function(){
+        removeLayer($(this).parent().attr('prefixe')+'Zone')
+        removeLayer($(this).parent().attr('prefixe')+'Marker')
+        removeLayer('interZone')
+        $('#'+$(this).parent().attr('prefixe')+'Commune').css('visibility','hidden');
+    })
+
+    function onMapClick(e) {
+        $('#accueil').hide()
+        updateMap(e.latlng.lng,e.latlng.lat)
+    }
+    map.on('click', onMapClick);
+
+    function getLayerByClassname(classname){
+        r = false
+        map.eachLayer(function (l){
+            if (l.classname == classname){
+                r = l
+            }
+        })
+        return r
+    }
+    function hasLayerWithClassname(classname){
+        r = false
+        map.eachLayer(function (l){
+            if (l.classname == classname){
+                r = true
+            }
+        })
+        return r
+    }
+
+    function hasBothMarkers(){
+        return (hasLayerWithClassname('firstMarker') && hasLayerWithClassname('lastMarker'))
+    }
+
+    function hasBothZones(){
+        return (hasLayerWithClassname('firstZone') && hasLayerWithClassname('lastZone'))
+    }
+
+    function removeLayer(classname){
+        l = getLayerByClassname(classname)
+        if (l){
+            l.removeFrom(map)
+        }
+    }
+
+    function replaceLayer(newclass,oldclass){
+        removeLayer(newclass)
+        getLayerByClassname(oldclass).classname = newclass
+    }
+
+    function replaceMarker(newclass,oldclass){
+        removeLayer(newclass)
+        oc = getLayerByClassname(oldclass)
+        drawMarker(oc._latlng[1],oc._latlng[0],newclass)
+        oc.removeFrom(map)
+    }
+
+    function updateCommuneInfos(x,y,classname){
+        $.ajax({
+            url: "get_commune.py?lon="+x+"&lat="+y
+        })
+        .done(function( data ) {
+            $('#'+classname +' > span').text(data[0]+' ('+data[1]+')')
+            $('#'+classname).css('visibility','visible');
+        })
+    }
+
+    function replaceInfos(){
+        $('#firstCommune').attr('id','tmpCommune')
+
+        $('#lastCommune').attr('prefixe','first')
+        $('#lastCommune').attr('id','firstCommune')
+
+        $('#tmpCommune').attr('prefixe','last')
+        $('#tmpCommune').attr('id','lastCommune')
+        $('#lastCommune span').empty()
+    }
+
+    function switchLastToFirst(){
+        replaceMarker('firstMarker','lastMarker')
+        replaceLayer('firstZone','lastZone')
+        replaceInfos()
+    }
+
+    function updateMap(x,y){
+        if (hasBothMarkers()){
+            switchLastToFirst()
+        }
+
+        if (hasLayerWithClassname('firstMarker')){
+            removeLayer('lastZone')
+            drawMarker(x,y,'lastMarker')
+            updateCommuneInfos(x,y,'lastCommune')
+            latlng = getLayerByClassname('firstMarker')._latlng
+            addZones(latlng[1],latlng[0],x,y)
+        } else {
+            drawMarker(x,y,'firstMarker')           
+            updateCommuneInfos(x,y,'firstCommune')
+            if (hasBothMarkers()){
+                latlng = getLayerByClassname('lastMarker')._latlng
+                addZones(x,y,latlng[1],latlng[0])     
+            }
+        }
+    }
+
+    function updateUrl(x1,y1,x2,y2){
+        if((typeof y2 === 'undefined')|| x1.isNan||x2.isNan||y1.isNan||y2.isNan){
+            window.location.hash = ""
+        } else {
+            window.location.hash="#osr/"+Number(x1).toFixed(5)+"/"+Number(y1).toFixed(5)+"/"+Number(x2).toFixed(5)+"/"+Number(y2).toFixed(5)
+        }
+    }
+
+
+    function isValidCoord(p){
+        return !(p.isNan) && (p < 90) && (p > -90)
+    }
+    function start(){
+        var x1,y1,x2,y2
+        if (window.location.hash){
+            if (window.location.hash.split('osr/')[1]){
+                coords = (window.location.hash.split('osr/')[1]).split('/')
+                if (coords.length == 4 && coords.some(isValidCoord)){
+                    x1 = coords[0]
+                    y1 = coords[1]
+                    x2 = coords[2]
+                    y2 = coords[3]
+                }
+            }
+        }
+        updateUrl(x1,y1,x2,y2)
+        if (x1 && y1 && x2 && y2){
+            // drawMarker(x1,y1,'firstMarker')
+            updateMap(x1,y1)
+            updateMap(x2,y2)
+            // drawMarker(x2,y2,'lastMarker')
+            // addZones(x1,y1,x2,y2)
+        }
+    }
+
+    function drawMarker(x,y,classname){
+        m = L.marker.svgMarker([y,x], {iconOptions: {color:$('.'+classname).css('color')}})
+        m.classname = classname
+        m.addTo(map)
+    }
+
+    function drawZone(geojson,classname){
+        m = L.geoJSON(geojson, {
+                  style:function(feature){
+                    return {color:$('.'+classname).css('color'),
+                    // fill:$('.'+classname).css('fill')
+                    fill:false
+                }
+            }
+        })
+        m.classname = classname
+        m.addTo(map)
+    }
+
+    function addZones(x1,y1,x2,y2){
+        $.ajax({
+            url: "ou_se_retrouver.py?x1="+x1+"&y1="+y1+"&x2="+x2+"&y2="+y2
+        })
+        .done(function( data ) {
+            removeLayer('firstZone')
+            removeLayer('lastZone')
+            removeLayer('interZone')
+            poly1 = data[0]
+            poly2 = data[1]
+            polyc = data[2]
+            drawZone(poly1,'firstZone')
+            drawZone(poly2,'lastZone')
+            drawZone(polyc,'interZone')
+            // bounds = getLayerByClassname('firstZone').getBounds();
+            // bounds.extend(getLayerByClassname('lastZone').getBounds());
+            // map.fitBounds(bounds.extend(getLayerByClassname('lastZone').getBounds()))
+            map.fitBounds(getLayerByClassname('firstZone').getBounds().extend(getLayerByClassname('lastZone').getBounds()))
+            updateUrl(x1,y1,x2,y2)
+        })
+    }
+
+</script>
+<div class="styleZone">
+    <div class="firstMarker"></div>
+    <div class="lastMarker"></div>
+    <div class="firstZone"></div>
+    <div class="interZone"></div>
+    <div class="lastZone"></div>
+</div>
+</body>
+</html>
+
