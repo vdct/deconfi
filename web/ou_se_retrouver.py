@@ -1,4 +1,4 @@
-#!./venv37/bin/python
+#!../venv37/bin/python
 # -*- coding: utf-8 -*-
 
 import cgi
