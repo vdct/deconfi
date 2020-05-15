@@ -55,6 +55,41 @@ def get_commune(lat,lon):
                      """)
         return((cur.fetchone()))
 
+def get_prefered_commune(lat,lon,dept):
+    with db.bano_cache.cursor() as cur:
+        cur.execute(f"""
+                        WITH
+                        prefered_dep
+                        as
+                        (SELECT '{dept}'::text AS dep,
+                                1::integer AS sortnum),
+                        res
+                        AS
+                        (SELECT p.nom,
+                                c.dep,1::integer AS sortnum,
+                                ST_Distance(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),3857),p.geometrie) AS distance
+                        FROM polygones_insee p
+                        JOIN cog_commune c
+                        ON p.insee_com = c.com
+                        WHERE dep = '{dept}' AND
+                              c.typecom != 'COMD' AND
+                              ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),3857) && p.geometrie
+                        UNION
+                        SELECT p.nom,c.dep,coalesce(sortnum,2),0
+                        FROM polygones_insee p
+                        JOIN cog_commune c
+                        ON p.insee_com = c.com
+                        LEFT OUTER JOIN prefered_dep
+                        USING (dep)
+                        WHERE ST_Intersects(p.geometrie,ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),3857)) AND
+                              c.typecom != 'COMD')
+                        SELECT nom,dep
+                        FROM   res
+                        ORDER BY sortnum,distance
+                        LIMIT 1
+                     """)
+        return((cur.fetchone()))
+
 def get_longest_line(lat,lon,epsg,geojson):
     with db.bano_cache.cursor() as cur:
         cur.execute(f"""

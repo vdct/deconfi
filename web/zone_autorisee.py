@@ -7,7 +7,7 @@ import json
 
 # import db
 
-from requetes import get_zone,get_commune,get_longest_line
+from requetes import get_zone,get_commune,get_longest_line,get_prefered_commune
 
 cgitb.enable()
 
@@ -18,6 +18,7 @@ lon = params['lon'].value
 # lon = -3.52112
 
 epsg = 2154
+dept = '00'
 commune_dept = get_commune(lat,lon)
 if commune_dept:
     dept = commune_dept[1]
@@ -40,4 +41,4 @@ geom_ll,longueur,lon_dest,lat_dest = get_longest_line(lat,lon,epsg,geojson)
 print ("Content-Type: application/json")
 print ("")
 
-print(f"[{geojson},{json.JSONEncoder().encode(get_commune(lat,lon))},{geom_ll},{longueur},{lon_dest},{lat_dest},{json.JSONEncoder().encode(get_commune(lat_dest,lon_dest))}]")
+print(f"[{geojson},{json.JSONEncoder().encode(get_commune(lat,lon))},{geom_ll},{longueur},{lon_dest},{lat_dest},{json.JSONEncoder().encode(get_prefered_commune(lat_dest,lon_dest,dept))}]")
