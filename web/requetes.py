@@ -26,6 +26,19 @@ def get_zone(lat,lon,epsg):
 
         return((cur.fetchone()[0]))
 
+def get_zone_20km(lat,lon,epsg):
+    with db.bano_cache.cursor() as cur:
+        cur.execute(f"""
+                        WITH
+                        zone_20km
+                        AS
+                        (SELECT ST_Transform(ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint({lon},{lat}),4326),{epsg}),20000),4326) AS geom)
+                        SELECT ST_AsGeoJSON(geom)
+                        FROM zone_20km
+                     """)
+
+        return((cur.fetchone()[0]))
+
 def get_common_part(geojson1,geojson2):
     with db.bano_cache.cursor() as cur:
         cur.execute(f"""
